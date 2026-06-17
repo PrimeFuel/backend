@@ -1,4 +1,4 @@
-package com.primefuel.fulltank.platform.catalog.domain.interfaces.rest;
+package com.primefuel.fulltank.platform.catalog.interfaces.rest;
 
 import com.primefuel.fulltank.platform.catalog.domain.model.aggregates.ProviderRating;
 import com.primefuel.fulltank.platform.catalog.domain.repositories.ProviderRatingRepository;

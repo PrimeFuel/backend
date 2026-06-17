@@ -1,4 +1,4 @@
-package com.primefuel.fulltank.platform.catalog.domain.infrastructure.persistence.jpa.adapters;
+package com.primefuel.fulltank.platform.catalog.infrastructure.persistence.jpa.adapters;
 
 import com.primefuel.fulltank.platform.catalog.domain.model.aggregates.ProviderRating;
 import com.primefuel.fulltank.platform.catalog.domain.repositories.ProviderRatingRepository;

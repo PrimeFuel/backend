@@ -1,4 +1,4 @@
-package com.primefuel.fulltank.platform.catalog.domain.infrastructure.persistence.jpa.repositories;
+package com.primefuel.fulltank.platform.catalog.infrastructure.persistence.jpa.repositories;
 
 import com.primefuel.fulltank.platform.catalog.infrastructure.persistence.jpa.entities.ProviderRatingPersistenceEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
