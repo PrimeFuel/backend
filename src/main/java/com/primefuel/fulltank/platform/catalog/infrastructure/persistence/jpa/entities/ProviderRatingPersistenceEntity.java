@@ -1,4 +1,4 @@
-package com.primefuel.fulltank.platform.catalog.domain.infrastructure.persistence.jpa.entities;
+package com.primefuel.fulltank.platform.catalog.infrastructure.persistence.jpa.entities;
 
 import com.primefuel.fulltank.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.Column;
