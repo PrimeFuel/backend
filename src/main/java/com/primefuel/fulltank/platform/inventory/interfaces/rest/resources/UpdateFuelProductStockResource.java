@@ -1,4 +1,5 @@
 package com.primefuel.fulltank.platform.inventory.interfaces.rest.resources;
 
-public record UpdateFuelProductStockResource() {
+public record UpdateFuelProductStockResource(Double newStock) {
 }
+
