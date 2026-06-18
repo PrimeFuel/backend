@@ -1,4 +1,5 @@
 package com.primefuel.fulltank.platform.inventory.domain.model.queries;
 
-public record GetFuelProductByIdQuery() {
+public record GetFuelProductByIdQuery(Long fuelProductId) {
 }
+
