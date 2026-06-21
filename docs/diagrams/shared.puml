@@ -1,0 +1,78 @@
+@startuml shared
+'==============================================================
+' Bounded Context: Shared (kernel transversal)
+' Capas: interfaces / application / domain / infrastructure
+'==============================================================
+title Bounded Context - Shared
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class GlobalExceptionHandler
+  package "resources" {
+    class ErrorResource <<record>>
+    class MessageResource <<record>>
+  }
+  package "transform" {
+    class ErrorResponseAssembler
+    class ResponseEntityAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application.result" <<application>> {
+  class Result<T>
+  class ApplicationError
+}
+
+' =========================== DOMAIN ===========================
+package "domain.model.aggregates" <<domain>> {
+  abstract class AbstractDomainAggregateRoot<T> {
+    # registerDomainEvent(Object)
+    + domainEvents() : Collection<Object>
+    + clearDomainEvents()
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "configuration" {
+    class WebCorsConfiguration
+  }
+  package "documentation.openapi" {
+    class OpenApiConfiguration
+  }
+  package "persistence.jpa.entities" {
+    abstract class AuditableAbstractPersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.configuration" {
+    class MySqlSchemaCompatibilityInitializer
+    class SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+  }
+}
+
+' =========================== RELACIONES ===========================
+GlobalExceptionHandler ..> ErrorResponseAssembler
+ErrorResponseAssembler ..> ErrorResource
+
+note top of AbstractDomainAggregateRoot
+  Clase base que heredan TODOS los
+  aggregate roots de los demas contextos.
+end note
+
+note top of AuditableAbstractPersistenceEntity
+  Clase base que heredan todas las
+  *PersistenceEntity (createdAt/updatedAt).
+end note
+@enduml
