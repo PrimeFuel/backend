@@ -1,0 +1,132 @@
+@startuml equipment
+'==============================================================
+' Bounded Context: Equipment
+' Capas: interfaces / application / domain / infrastructure
+'==============================================================
+title Bounded Context - Equipment
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class EquipmentController
+
+  package "resources" {
+    class CreateEquipmentResource <<record>>
+    class UpdateEquipmentResource <<record>>
+    class EquipmentResource <<record>>
+    class FavoriteProviderResource <<record>>
+  }
+  package "transform" {
+    class CreateEquipmentCommandFromResourceAssembler
+    class UpdateEquipmentCommandFromResourceAssembler
+    class EquipmentResourceFromEntityAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface EquipmentCommandService
+  interface EquipmentQueryService
+  package "internal" {
+    class EquipmentCommandServiceImpl
+    class EquipmentQueryServiceImpl
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.aggregates" {
+    class Equipment {
+      - Long id
+      - String name
+      - EquipmentType equipmentType
+      - String licensePlate
+      - FuelType fuelType
+      - Double tankCapacity
+      - Double currentLevel
+      - String location
+      - String status
+      - Boolean autoRefill
+      - Integer refillThreshold
+      - Long companyId
+      - Long favoriteProviderId
+      + update(UpdateEquipmentCommand)
+      + assignFavoriteProvider(Long)
+      + receiveFuel(Double)
+    }
+  }
+  package "model.valueobjects" {
+    enum EquipmentType {
+      TRUCK
+      BUS
+      EXCAVATOR
+      GENERATOR
+      FORKLIFT
+      OTHER
+    }
+  }
+  package "model.commands" {
+    class CreateEquipmentCommand <<record>>
+    class UpdateEquipmentCommand <<record>>
+  }
+  package "model.queries" {
+    class GetAllEquipmentQuery <<record>>
+    class GetEquipmentByIdQuery <<record>>
+    class GetEquipmentByCompanyIdQuery <<record>>
+  }
+  package "repositories" {
+    interface EquipmentRepository
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "persistence.jpa.adapters" {
+    class EquipmentRepositoryImpl
+  }
+  package "persistence.jpa.entities" {
+    class EquipmentPersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.repositories" {
+    interface EquipmentPersistenceRepository
+  }
+  package "persistence.jpa.assemblers" {
+    class EquipmentPersistenceAssembler
+  }
+}
+
+' =========================== RELACIONES ===========================
+EquipmentController ..> EquipmentCommandService
+EquipmentController ..> EquipmentQueryService
+
+EquipmentCommandServiceImpl ..|> EquipmentCommandService
+EquipmentQueryServiceImpl ..|> EquipmentQueryService
+
+EquipmentCommandServiceImpl ..> EquipmentRepository
+EquipmentCommandServiceImpl ..> Equipment
+EquipmentQueryServiceImpl ..> EquipmentRepository
+
+Equipment --> EquipmentType
+
+EquipmentRepositoryImpl ..|> EquipmentRepository
+EquipmentRepositoryImpl ..> EquipmentPersistenceRepository
+EquipmentRepositoryImpl ..> EquipmentPersistenceAssembler
+EquipmentPersistenceAssembler ..> EquipmentPersistenceEntity
+EquipmentPersistenceAssembler ..> Equipment
+
+note bottom of Equipment
+  Equipment usa FuelType del BC Inventory
+  (acoplamiento entre contextos a revisar).
+end note
+@enduml

@@ -1,0 +1,161 @@
+@startuml fulfillment
+'==============================================================
+' Bounded Context: Fulfillment
+' Capas: interfaces / application / domain / infrastructure
+'==============================================================
+title Bounded Context - Fulfillment
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class DeliveriesController
+  class DriversController
+  class VehiclesController
+  class FulfillmentController
+
+  package "resources" {
+    class CreateDeliveryResource <<record>>
+    class DeliveryResource <<record>>
+    class FailDeliveryResource <<record>>
+    class DriverResource <<record>>
+    class VehicleResource <<record>>
+  }
+  package "transform" {
+    class CreateDeliveryCommandFromResourceAssembler
+    class DeliveryResourceFromEntityAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface DeliveryCommandService
+  interface DeliveryQueryService
+  package "internal" {
+    class DeliveryCommandServiceImpl
+    class DeliveryQueryServiceImpl
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.aggregates" {
+    class Delivery {
+      - Long id
+      - Long orderId
+      - Long providerId
+      - Long driverId
+      - Long vehicleId
+      - DeliveryStatus status
+      - String scheduledDate
+      - LocalDateTime dispatchedAt
+      - LocalDateTime deliveredAt
+      - String notes
+      + dispatch()
+      + complete()
+      + fail(String)
+    }
+    class Driver {
+      - Long id
+      - Long providerId
+      - String firstName
+      - String lastName
+      - String licenseNumber
+      - String phoneNumber
+      - String email
+      - String status
+    }
+    class Vehicle {
+      - Long id
+      - Long providerId
+      - String licensePlate
+      - String brand
+      - String model
+      - Double capacity
+      - String unit
+      - String status
+    }
+  }
+  package "model.valueobjects" {
+    enum DeliveryStatus {
+      SCHEDULED
+      DISPATCHED
+      DELIVERED
+      FAILED
+    }
+  }
+  package "model.commands" {
+    class CreateDeliveryCommand <<record>>
+    class DispatchDeliveryCommand <<record>>
+    class CompleteDeliveryCommand <<record>>
+    class FailDeliveryCommand <<record>>
+  }
+  package "model.queries" {
+    class GetAllDeliveriesQuery <<record>>
+    class GetDeliveryByIdQuery <<record>>
+    class GetDeliveryByOrderIdQuery <<record>>
+  }
+  package "repositories" {
+    interface DeliveryRepository
+    interface DriverRepository
+    interface VehicleRepository
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "persistence.jpa.adapters" {
+    class DeliveryRepositoryImpl
+    class DriverRepositoryImpl
+    class VehicleRepositoryImpl
+  }
+  package "persistence.jpa.entities" {
+    class DeliveryPersistenceEntity <<entity>>
+    class DriverPersistenceEntity <<entity>>
+    class VehiclePersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.repositories" {
+    interface DeliveryPersistenceRepository
+    interface DriverPersistenceRepository
+    interface VehiclePersistenceRepository
+  }
+  package "persistence.jpa.assemblers" {
+    class DeliveryPersistenceAssembler
+    class DriverPersistenceAssembler
+    class VehiclePersistenceAssembler
+  }
+}
+
+' =========================== RELACIONES ===========================
+DeliveriesController ..> DeliveryCommandService
+DeliveriesController ..> DeliveryQueryService
+DriversController ..> DriverRepository
+VehiclesController ..> VehicleRepository
+
+DeliveryCommandServiceImpl ..|> DeliveryCommandService
+DeliveryQueryServiceImpl ..|> DeliveryQueryService
+DeliveryCommandServiceImpl ..> DeliveryRepository
+DeliveryCommandServiceImpl ..> Delivery
+DeliveryQueryServiceImpl ..> DeliveryRepository
+
+Delivery --> DeliveryStatus
+
+DeliveryRepositoryImpl ..|> DeliveryRepository
+DriverRepositoryImpl ..|> DriverRepository
+VehicleRepositoryImpl ..|> VehicleRepository
+
+DeliveryRepositoryImpl ..> DeliveryPersistenceRepository
+DeliveryRepositoryImpl ..> DeliveryPersistenceAssembler
+DeliveryPersistenceAssembler ..> DeliveryPersistenceEntity
+DeliveryPersistenceAssembler ..> Delivery
+@enduml
