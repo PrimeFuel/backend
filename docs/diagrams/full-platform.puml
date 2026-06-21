@@ -1,0 +1,402 @@
+@startuml full-platform
+'======================================================================
+' FullTank Platform - Diagrama completo (todos los bounded contexts)
+' Cada BC con sus 4 capas: interfaces / application / domain / infrastructure
+' + relaciones entre contextos (acoplamiento real e integracion por ID).
+'======================================================================
+title FullTank Platform - Vista completa por Bounded Context y capas
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 12
+skinparam ranksep 28
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+  BackgroundColor<<context>>        #FBFCFC
+  BorderColor<<context>>            #34495E
+}
+
+legend top left
+  | Color | Capa |
+  |<#FDF2E9>| interfaces |
+  |<#EAF2F8>| application |
+  |<#E9F7EF>| domain |
+  |<#F4ECF7>| infrastructure |
+  --
+  ..|>  implementa (puerto/adaptador)
+  ..>   usa
+  --[#blue]>  dependencia de codigo entre contextos
+  ..[#red]>   integracion por ID (referencia logica)
+endlegend
+
+'====================================================================
+' SHARED (kernel)
+'====================================================================
+package "shared" <<context>> {
+  package "domain " <<domain>> {
+    abstract class AbstractDomainAggregateRoot
+  }
+  package "infrastructure " <<infrastructure>> {
+    abstract class AuditableAbstractPersistenceEntity
+    class WebCorsConfiguration
+    class OpenApiConfiguration
+  }
+  package "interfaces " <<interfaces>> {
+    class GlobalExceptionHandler
+  }
+  package "application " <<application>> {
+    class Result
+  }
+}
+
+'====================================================================
+' IAM
+'====================================================================
+package "iam" <<context>> {
+  package "interfaces" <<interfaces>> {
+    class AuthenticationController
+    class UsersController
+    class BuyerCompaniesController
+    class ProviderCompaniesController
+  }
+  package "application" <<application>> {
+    interface UserCommandService
+    interface UserQueryService
+    interface BuyerCompanyCommandService
+    interface ProviderCompanyCommandService
+  }
+  package "domain" <<domain>> {
+    class User {
+      Long id
+      String username
+      Long companyId
+      Long providerId
+    }
+    class BuyerCompany {
+      Long id
+      String ruc
+    }
+    class ProviderCompany {
+      Long id
+      Double rating
+    }
+    class Role
+    enum Roles
+    interface UserRepository
+    interface BuyerCompanyRepository
+    interface ProviderCompanyRepository
+  }
+  package "infrastructure" <<infrastructure>> {
+    class UserRepositoryImpl
+    class UserPersistenceEntity
+    class WebSecurityConfiguration
+    class TokenServiceImpl
+  }
+}
+
+'====================================================================
+' INVENTORY
+'====================================================================
+package "inventory" <<context>> {
+  package "interfaces " as iv_if <<interfaces>> {
+    class FuelProductsController
+  }
+  package "application " as iv_app <<application>> {
+    interface FuelProductCommandService
+    interface FuelProductQueryService
+  }
+  package "domain " as iv_dom <<domain>> {
+    class FuelProduct {
+      Long id
+      FuelType fuelType
+      Double pricePerUnit
+      Double availableStock
+      Long providerId
+    }
+    enum FuelType
+    interface FuelProductRepository
+  }
+  package "infraestructure" as iv_inf <<infrastructure>> {
+    class FuelProductRepositoryImpl
+    class FuelProductPersistenceEntity
+  }
+}
+
+'====================================================================
+' EQUIPMENT
+'====================================================================
+package "equipment" <<context>> {
+  package "interfaces  " as eq_if <<interfaces>> {
+    class EquipmentController
+  }
+  package "application  " as eq_app <<application>> {
+    interface EquipmentCommandService
+    interface EquipmentQueryService
+  }
+  package "domain  " as eq_dom <<domain>> {
+    class Equipment {
+      Long id
+      EquipmentType equipmentType
+      FuelType fuelType
+      Long companyId
+      Long favoriteProviderId
+    }
+    enum EquipmentType
+    interface EquipmentRepository
+  }
+  package "infrastructure  " as eq_inf <<infrastructure>> {
+    class EquipmentRepositoryImpl
+    class EquipmentPersistenceEntity
+  }
+}
+
+'====================================================================
+' ORDERING
+'====================================================================
+package "ordering" <<context>> {
+  package "interfaces   " as or_if <<interfaces>> {
+    class FuelOrdersController
+    class FuelRequestsController
+  }
+  package "application   " as or_app <<application>> {
+    interface FuelOrderCommandService
+    interface FuelOrderQueryService
+    class FuelRequestService
+  }
+  package "domain   " as or_dom <<domain>> {
+    class FuelOrder {
+      Long id
+      Long requestId
+      Long companyId
+      Long providerId
+      Long fuelProductId
+      Long equipmentId
+      OrderStatus status
+    }
+    enum OrderStatus
+    enum RequestStatus
+    interface FuelOrderRepository
+  }
+  package "infrastructure   " as or_inf <<infrastructure>> {
+    class FuelOrderRepositoryImpl
+    class FuelOrderPersistenceEntity
+    class FuelRequestPersistenceEntity
+  }
+}
+
+'====================================================================
+' FULFILLMENT
+'====================================================================
+package "fulfillment" <<context>> {
+  package "interfaces    " as fu_if <<interfaces>> {
+    class DeliveriesController
+    class DriversController
+    class VehiclesController
+  }
+  package "application    " as fu_app <<application>> {
+    interface DeliveryCommandService
+    interface DeliveryQueryService
+  }
+  package "domain    " as fu_dom <<domain>> {
+    class Delivery {
+      Long id
+      Long orderId
+      Long driverId
+      Long vehicleId
+      DeliveryStatus status
+    }
+    class Driver
+    class Vehicle
+    enum DeliveryStatus
+    interface DeliveryRepository
+  }
+  package "infrastructure    " as fu_inf <<infrastructure>> {
+    class DeliveryRepositoryImpl
+    class DeliveryPersistenceEntity
+  }
+}
+
+'====================================================================
+' PAYMENT
+'====================================================================
+package "payment" <<context>> {
+  package "interfaces     " as pa_if <<interfaces>> {
+    class PaymentsController
+  }
+  package "application     " as pa_app <<application>> {
+    interface PaymentCommandService
+    interface PaymentQueryService
+  }
+  package "domain     " as pa_dom <<domain>> {
+    class Payment {
+      Long id
+      Long orderId
+      Long companyId
+      PaymentStatus status
+      PaymentMethod paymentMethod
+    }
+    enum PaymentStatus
+    enum PaymentMethod
+    interface PaymentRepository
+  }
+  package "infrastructure     " as pa_inf <<infrastructure>> {
+    class PaymentRepositoryImpl
+    class PaymentPersistenceEntity
+  }
+}
+
+'====================================================================
+' NOTIFICATION
+'====================================================================
+package "notification" <<context>> {
+  package "interfaces      " as no_if <<interfaces>> {
+    class NotificationsController
+  }
+  package "application      " as no_app <<application>> {
+    interface NotificationCommandService
+    interface NotificationQueryService
+  }
+  package "domain      " as no_dom <<domain>> {
+    class Notification {
+      Long id
+      Long userId
+      NotificationType type
+      Long referenceId
+    }
+    enum NotificationType
+    interface NotificationRepository
+  }
+  package "infrastructure      " as no_inf <<infrastructure>> {
+    class NotificationRepositoryImpl
+    class NotificationPersistenceEntity
+  }
+}
+
+'====================================================================
+' CATALOG
+'====================================================================
+package "catalog" <<context>> {
+  package "interfaces       " as ca_if <<interfaces>> {
+    class ProviderRatingsController
+  }
+  package "domain       " as ca_dom <<domain>> {
+    class ProviderRating {
+      Long id
+      Long companyId
+      Long providerId
+      Integer rating
+    }
+    interface ProviderRatingRepository
+  }
+  package "infrastructure       " as ca_inf <<infrastructure>> {
+    class ProviderRatingRepositoryImpl
+    class ProviderRatingPersistenceEntity
+  }
+}
+
+'====================================================================
+' REPORTING
+'====================================================================
+package "reporting" <<context>> {
+  package "interfaces        " as re_if <<interfaces>> {
+    class AnalyticsController
+  }
+  package "application        " as re_app <<application>> {
+    interface AnalyticsQueryService
+    class AnalyticsQueryServiceImpl
+  }
+  package "domain        " as re_dom <<domain>> {
+    class BuyerAnalytics
+    class ProviderAnalytics
+    class PlatformSummary
+  }
+}
+
+'======================================================================
+' RELACIONES INTERNAS (resumidas: interfaces -> application -> domain <- infra)
+'======================================================================
+AuthenticationController ..> UserCommandService
+UsersController ..> UserQueryService
+UserRepositoryImpl ..|> UserRepository
+User "1" o--> "*" Role
+Role --> Roles
+
+FuelProductsController ..> FuelProductCommandService
+FuelProductRepositoryImpl ..|> FuelProductRepository
+FuelProduct --> FuelType
+
+EquipmentController ..> EquipmentCommandService
+EquipmentRepositoryImpl ..|> EquipmentRepository
+Equipment --> EquipmentType
+
+FuelOrdersController ..> FuelOrderCommandService
+FuelOrderRepositoryImpl ..|> FuelOrderRepository
+FuelOrder --> OrderStatus
+
+DeliveriesController ..> DeliveryCommandService
+DeliveryRepositoryImpl ..|> DeliveryRepository
+Delivery --> DeliveryStatus
+
+PaymentsController ..> PaymentCommandService
+PaymentRepositoryImpl ..|> PaymentRepository
+Payment --> PaymentStatus
+
+NotificationsController ..> NotificationCommandService
+NotificationRepositoryImpl ..|> NotificationRepository
+Notification --> NotificationType
+
+ProviderRatingsController ..> ProviderRatingRepository
+ProviderRatingRepositoryImpl ..|> ProviderRatingRepository
+
+AnalyticsController ..> AnalyticsQueryService
+AnalyticsQueryServiceImpl ..|> AnalyticsQueryService
+
+'======================================================================
+' RELACIONES ENTRE CONTEXTOS
+'======================================================================
+' --- Dependencia REAL de codigo ---
+Equipment -[#blue]-> FuelType : usa VO de inventory
+AnalyticsQueryServiceImpl .[#blue].> FuelOrderRepository
+AnalyticsQueryServiceImpl .[#blue].> PaymentRepository
+AnalyticsQueryServiceImpl .[#blue].> DeliveryRepository
+
+' --- Integracion por ID (referencia logica, sin import) ---
+FuelOrder .[#red].> FuelProduct : fuelProductId
+FuelOrder .[#red].> Equipment : equipmentId
+FuelOrder .[#red].> BuyerCompany : companyId
+FuelOrder .[#red].> ProviderCompany : providerId
+FuelOrder .[#red].> FuelRequestPersistenceEntity : requestId
+Delivery .[#red].> FuelOrder : orderId
+Payment .[#red].> FuelOrder : orderId
+Payment .[#red].> BuyerCompany : companyId
+Notification .[#red].> User : userId
+ProviderRating .[#red].> BuyerCompany : companyId
+ProviderRating .[#red].> ProviderCompany : providerId
+FuelProduct .[#red].> ProviderCompany : providerId
+Equipment .[#red].> BuyerCompany : companyId
+
+' --- Herencia desde shared (kernel) ---
+User              --|> AbstractDomainAggregateRoot
+FuelProduct       --|> AbstractDomainAggregateRoot
+Equipment         --|> AbstractDomainAggregateRoot
+FuelOrder         --|> AbstractDomainAggregateRoot
+Delivery          --|> AbstractDomainAggregateRoot
+Payment           --|> AbstractDomainAggregateRoot
+Notification      --|> AbstractDomainAggregateRoot
+ProviderRating    --|> AbstractDomainAggregateRoot
+
+UserPersistenceEntity          --|> AuditableAbstractPersistenceEntity
+FuelProductPersistenceEntity   --|> AuditableAbstractPersistenceEntity
+EquipmentPersistenceEntity     --|> AuditableAbstractPersistenceEntity
+FuelOrderPersistenceEntity     --|> AuditableAbstractPersistenceEntity
+DeliveryPersistenceEntity      --|> AuditableAbstractPersistenceEntity
+PaymentPersistenceEntity       --|> AuditableAbstractPersistenceEntity
+NotificationPersistenceEntity  --|> AuditableAbstractPersistenceEntity
+ProviderRatingPersistenceEntity --|> AuditableAbstractPersistenceEntity
+@enduml
