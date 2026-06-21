@@ -1,0 +1,118 @@
+@startuml notification
+'==============================================================
+' Bounded Context: Notification
+' Capas: interfaces / application / domain / infrastructure
+'==============================================================
+title Bounded Context - Notification
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class NotificationsController
+  class NotificationController
+
+  package "resources" {
+    class CreateNotificationResource <<record>>
+    class NotificationResource <<record>>
+  }
+  package "transform" {
+    class CreateNotificationCommandFromResourceAssembler
+    class NotificationResourceFromEntityAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface NotificationCommandService
+  interface NotificationQueryService
+  package "internal" {
+    class NotificationCommandServiceImpl
+    class NotificationQueryServiceImpl
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.aggregates" {
+    class Notification {
+      - Long id
+      - Long userId
+      - NotificationType type
+      - String title
+      - String message
+      - boolean read
+      - Long referenceId
+      - Date createdAt
+      + markAsRead()
+    }
+  }
+  package "model.valueobjects" {
+    enum NotificationType {
+      NEW_REQUEST
+      ORDER_ACCEPTED / REJECTED
+      ORDER_DISPATCHED / DELIVERED
+      DELIVERY_*
+      PAYMENT_*
+      GENERAL
+    }
+  }
+  package "model.commands" {
+    class CreateNotificationCommand <<record>>
+    class MarkNotificationAsReadCommand <<record>>
+  }
+  package "model.queries" {
+    class GetNotificationByIdQuery <<record>>
+    class GetNotificationsByUserIdQuery <<record>>
+    class GetUnreadNotificationsByUserIdQuery <<record>>
+  }
+  package "repositories" {
+    interface NotificationRepository
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "persistence.jpa.adapters" {
+    class NotificationRepositoryImpl
+  }
+  package "persistence.jpa.entities" {
+    class NotificationPersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.repositories" {
+    interface NotificationPersistenceRepository
+  }
+  package "persistence.jpa.assemblers" {
+    class NotificationPersistenceAssembler
+  }
+}
+
+' =========================== RELACIONES ===========================
+NotificationsController ..> NotificationCommandService
+NotificationsController ..> NotificationQueryService
+
+NotificationCommandServiceImpl ..|> NotificationCommandService
+NotificationQueryServiceImpl ..|> NotificationQueryService
+
+NotificationCommandServiceImpl ..> NotificationRepository
+NotificationCommandServiceImpl ..> Notification
+NotificationQueryServiceImpl ..> NotificationRepository
+
+Notification --> NotificationType
+
+NotificationRepositoryImpl ..|> NotificationRepository
+NotificationRepositoryImpl ..> NotificationPersistenceRepository
+NotificationRepositoryImpl ..> NotificationPersistenceAssembler
+NotificationPersistenceAssembler ..> NotificationPersistenceEntity
+NotificationPersistenceAssembler ..> Notification
+@enduml
