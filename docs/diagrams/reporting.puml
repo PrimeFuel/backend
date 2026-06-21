@@ -1,0 +1,101 @@
+@startuml reporting
+'==============================================================
+' Bounded Context: Reporting (read-only / analytics)
+' Capas presentes: interfaces / application / domain
+' (sin infrastructure ni agregados propios; solo lectura)
+'==============================================================
+title Bounded Context - Reporting
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class AnalyticsController
+  package "resources" {
+    class BuyerAnalyticsResource <<record>>
+    class ProviderAnalyticsResource <<record>>
+    class PlatformSummaryResource <<record>>
+  }
+  package "transform" {
+    class BuyerAnalyticsResourceFromValueObjectAssembler
+    class ProviderAnalyticsResourceFromValueObjectAssembler
+    class PlatformSummaryResourceFromValueObjectAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface AnalyticsQueryService
+  package "internal" {
+    class AnalyticsQueryServiceImpl
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.valueobjects" {
+    class BuyerAnalytics <<record>> {
+      Long companyId
+      long totalOrders
+      double totalSpent
+      long completedPayments
+      long pendingPayments
+      List<MonthlyAmount> monthlySpending
+    }
+    class ProviderAnalytics <<record>> {
+      Long providerId
+      long totalOrders
+      long confirmedOrders
+      long cancelledOrders
+      double totalRevenue
+      List<MonthlyAmount> monthlyRevenue
+    }
+    class PlatformSummary <<record>> {
+      long totalOrders
+      long totalDeliveries
+      long totalPayments
+      double totalRevenue
+      long pendingOrders
+      long completedDeliveries
+    }
+    class MonthlyAmount <<record>> {
+      String month
+      int monthIndex
+      double amount
+    }
+  }
+  package "model.queries" {
+    class GetBuyerAnalyticsQuery <<record>>
+    class GetProviderAnalyticsQuery <<record>>
+    class GetPlatformSummaryQuery <<record>>
+  }
+}
+
+' =========================== RELACIONES ===========================
+AnalyticsController ..> AnalyticsQueryService
+AnalyticsController ..> BuyerAnalyticsResourceFromValueObjectAssembler
+
+AnalyticsQueryServiceImpl ..|> AnalyticsQueryService
+AnalyticsQueryServiceImpl ..> BuyerAnalytics
+AnalyticsQueryServiceImpl ..> ProviderAnalytics
+AnalyticsQueryServiceImpl ..> PlatformSummary
+
+BuyerAnalytics o--> "*" MonthlyAmount
+ProviderAnalytics o--> "*" MonthlyAmount
+
+note bottom of AnalyticsQueryServiceImpl
+  Agrega datos consultando repositorios de
+  Ordering / Payment / Fulfillment (lectura
+  entre contextos). Reporting no tiene
+  persistencia propia.
+end note
+@enduml

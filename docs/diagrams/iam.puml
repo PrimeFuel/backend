@@ -1,0 +1,229 @@
+@startuml iam
+'==============================================================
+' Bounded Context: IAM (Identity & Access Management)
+' Capas: interfaces / application / domain / infrastructure
+' Solo clases del propio bounded context.
+'==============================================================
+title Bounded Context - IAM
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class AuthenticationController
+  class UsersController
+  class BuyerCompaniesController
+  class ProviderCompaniesController
+  class DirectoryController
+
+  package "resources" {
+    class SignUpResource <<record>>
+    class SignInResource <<record>>
+    class AuthenticatedUserResource <<record>>
+    class UserResource <<record>>
+    class CreateBuyerCompanyResource <<record>>
+    class BuyerCompanyResource <<record>>
+    class CreateProviderCompanyResource <<record>>
+    class ProviderCompanyResource <<record>>
+  }
+  package "transform" {
+    class SignUpCommandFromResourceAssembler
+    class SignInCommandFromResourceAssembler
+    class AuthenticatedUserResourceFromEntityAssembler
+    class UserResourceFromEntityAssembler
+    class CreateBuyerCompanyCommandFromResourceAssembler
+    class BuyerCompanyResourceFromEntityAssembler
+    class CreateProviderCompanyCommandFromResourceAssembler
+    class ProviderCompanyResourceFromEntityAssembler
+  }
+}
+
+package "interfaces.acl" <<interfaces>> {
+  class IamContextFacade
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface UserCommandService
+  interface UserQueryService
+  interface BuyerCompanyCommandService
+  interface BuyerCompanyQueryService
+  interface ProviderCompanyCommandService
+  interface ProviderCompanyQueryService
+  interface RoleCommandService
+
+  package "internal" {
+    class UserCommandServiceImpl
+    class UserQueryServiceImpl
+    class BuyerCompanyCommandServiceImpl
+    class BuyerCompanyQueryServiceImpl
+    class ProviderCompanyCommandServiceImpl
+    class ProviderCompanyQueryServiceImpl
+    class RoleCommandServiceImpl
+    class ApplicationReadyEventHandler
+
+    package "outboundservices" {
+      interface HashingService
+      interface TokenService
+    }
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.aggregates" {
+    class User {
+      - Long id
+      - String username
+      - String password
+      - Set<Role> roles
+      - Long companyId
+      - Long providerId
+      + addRole(Role) : User
+      + addRoles(List<Role>) : User
+    }
+    class BuyerCompany {
+      - Long id
+      - String name
+      - String ruc
+      - String sector
+      - String address
+      - String contactEmail
+      - String phone
+    }
+    class ProviderCompany {
+      - Long id
+      - String name
+      - String ruc
+      - Double rating
+      - String address
+      - String phone
+      - List<String> fuelTypesOffered
+      - String description
+    }
+  }
+  package "model.entities" {
+    class Role {
+      - Long id
+      - Roles name
+      + getStringName() : String
+      + {static} validateRoleSet(List<Role>) : List<Role>
+    }
+  }
+  package "model.valueobjects" {
+    enum Roles {
+      ROLE_BUYER
+      ROLE_PROVIDER
+    }
+  }
+  package "model.commands" {
+    class SignUpCommand <<record>>
+    class SignInCommand <<record>>
+    class SeedRolesCommand <<record>>
+    class CreateBuyerCompanyCommand <<record>>
+    class CreateProviderCompanyCommand <<record>>
+  }
+  package "model.queries" {
+    class "Get*Query (x7)" as IamQueries <<record>>
+  }
+  package "repositories" {
+    interface UserRepository
+    interface RoleRepository
+    interface BuyerCompanyRepository
+    interface ProviderCompanyRepository
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "persistence.jpa.adapters" {
+    class UserRepositoryImpl
+    class RoleRepositoryImpl
+    class BuyerCompanyRepositoryImpl
+    class ProviderCompanyRepositoryImpl
+  }
+  package "persistence.jpa.entities" {
+    class UserPersistenceEntity <<entity>>
+    class RolePersistenceEntity <<entity>>
+    class BuyerCompanyPersistenceEntity <<entity>>
+    class ProviderCompanyPersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.repositories" {
+    interface UserPersistenceRepository
+    interface RolePersistenceRepository
+    interface BuyerCompanyPersistenceRepository
+    interface ProviderCompanyPersistenceRepository
+  }
+  package "persistence.jpa.assemblers" {
+    class UserPersistenceAssembler
+    class RolePersistenceAssembler
+    class BuyerCompanyPersistenceAssembler
+    class ProviderCompanyPersistenceAssembler
+  }
+  package "authorization (Spring Security)" {
+    class WebSecurityConfiguration
+    class UserDetailsServiceImpl
+    class BearerAuthorizationRequestFilter
+  }
+  package "hashing.bcrypt" {
+    class HashingServiceImpl
+  }
+  package "tokens.jwt" {
+    class TokenServiceImpl
+  }
+}
+
+' =========================== RELACIONES ===========================
+' interfaces -> application
+AuthenticationController ..> UserCommandService
+UsersController ..> UserQueryService
+BuyerCompaniesController ..> BuyerCompanyCommandService
+ProviderCompaniesController ..> ProviderCompanyCommandService
+DirectoryController ..> ProviderCompanyQueryService
+IamContextFacade ..> UserQueryService
+
+' application impls
+UserCommandServiceImpl ..|> UserCommandService
+UserQueryServiceImpl ..|> UserQueryService
+BuyerCompanyCommandServiceImpl ..|> BuyerCompanyCommandService
+BuyerCompanyQueryServiceImpl ..|> BuyerCompanyQueryService
+ProviderCompanyCommandServiceImpl ..|> ProviderCompanyCommandService
+ProviderCompanyQueryServiceImpl ..|> ProviderCompanyQueryService
+RoleCommandServiceImpl ..|> RoleCommandService
+
+' application -> domain
+UserCommandServiceImpl ..> UserRepository
+UserCommandServiceImpl ..> User
+UserCommandServiceImpl ..> HashingService
+UserCommandServiceImpl ..> TokenService
+BuyerCompanyCommandServiceImpl ..> BuyerCompanyRepository
+ProviderCompanyCommandServiceImpl ..> ProviderCompanyRepository
+RoleCommandServiceImpl ..> RoleRepository
+
+' domain relations
+User "1" o--> "*" Role
+Role --> Roles
+HashingServiceImpl ..|> HashingService
+TokenServiceImpl ..|> TokenService
+
+' infrastructure -> domain (adapters implement repositories)
+UserRepositoryImpl ..|> UserRepository
+RoleRepositoryImpl ..|> RoleRepository
+BuyerCompanyRepositoryImpl ..|> BuyerCompanyRepository
+ProviderCompanyRepositoryImpl ..|> ProviderCompanyRepository
+
+UserRepositoryImpl ..> UserPersistenceRepository
+UserRepositoryImpl ..> UserPersistenceAssembler
+UserPersistenceAssembler ..> UserPersistenceEntity
+UserPersistenceAssembler ..> User
+@enduml
