@@ -1,0 +1,144 @@
+@startuml ordering
+'==============================================================
+' Bounded Context: Ordering
+' Capas: interfaces / application / domain / infrastructure
+'==============================================================
+title Bounded Context - Ordering
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+left to right direction
+
+skinparam package {
+  BackgroundColor<<interfaces>>     #FDF2E9
+  BackgroundColor<<application>>    #EAF2F8
+  BackgroundColor<<domain>>         #E9F7EF
+  BackgroundColor<<infrastructure>> #F4ECF7
+}
+
+' =========================== INTERFACES ===========================
+package "interfaces.rest" <<interfaces>> {
+  class FuelOrdersController
+  class FuelRequestsController
+  class OrderingController
+
+  package "resources" {
+    class CreateFuelOrderResource <<record>>
+    class FuelOrderResource <<record>>
+    class CreateFuelRequestResource <<record>>
+    class FuelRequestResource <<record>>
+    class RejectFuelRequestResource <<record>>
+  }
+  package "transform" {
+    class CreateFuelOrderCommandFromResourceAssembler
+    class FuelOrderResourceFromEntityAssembler
+  }
+}
+
+' =========================== APPLICATION ===========================
+package "application" <<application>> {
+  interface FuelOrderCommandService
+  interface FuelOrderQueryService
+  package "internal" {
+    class FuelOrderCommandServiceImpl
+    class FuelOrderQueryServiceImpl
+    class FuelRequestService
+  }
+}
+
+' =========================== DOMAIN ===========================
+package "domain" <<domain>> {
+  package "model.aggregates" {
+    class FuelOrder {
+      - Long id
+      - Long requestId
+      - Long companyId
+      - Long providerId
+      - Long fuelProductId
+      - Long equipmentId
+      - Double requestedQuantity
+      - Double totalPrice
+      - OrderStatus status
+      - String deliveryAddress
+      - LocalDate scheduledDate
+      + confirm()
+      + cancel()
+      + dispatch()
+      + receive()
+      + markPaid()
+    }
+  }
+  package "model.valueobjects" {
+    enum OrderStatus {
+      PENDING
+      CONFIRMED
+      DISPATCHED
+      PENDING_PAYMENT
+      PAID
+      IN_PROGRESS
+      DELIVERED
+      CANCELLED
+    }
+    enum RequestStatus {
+      PENDING
+      APPROVED
+      REJECTED
+    }
+  }
+  package "model.commands" {
+    class CreateFuelOrderCommand <<record>>
+    class ConfirmFuelOrderCommand <<record>>
+    class CancelFuelOrderCommand <<record>>
+  }
+  package "model.queries" {
+    class GetAllFuelOrdersQuery <<record>>
+    class GetFuelOrderByIdQuery <<record>>
+    class GetFuelOrdersByCompanyIdQuery <<record>>
+    class GetFuelOrdersByProviderIdQuery <<record>>
+  }
+  package "repositories" {
+    interface FuelOrderRepository
+  }
+}
+
+' =========================== INFRASTRUCTURE ===========================
+package "infrastructure" <<infrastructure>> {
+  package "persistence.jpa.adapters" {
+    class FuelOrderRepositoryImpl
+  }
+  package "persistence.jpa.entities" {
+    class FuelOrderPersistenceEntity <<entity>>
+    class FuelRequestPersistenceEntity <<entity>>
+  }
+  package "persistence.jpa.repositories" {
+    interface FuelOrderPersistenceRepository
+    interface FuelRequestPersistenceRepository
+  }
+  package "persistence.jpa.assemblers" {
+    class FuelOrderPersistenceAssembler
+  }
+}
+
+' =========================== RELACIONES ===========================
+FuelOrdersController ..> FuelOrderCommandService
+FuelOrdersController ..> FuelOrderQueryService
+FuelRequestsController ..> FuelRequestService
+
+FuelOrderCommandServiceImpl ..|> FuelOrderCommandService
+FuelOrderQueryServiceImpl ..|> FuelOrderQueryService
+
+FuelOrderCommandServiceImpl ..> FuelOrderRepository
+FuelOrderCommandServiceImpl ..> FuelOrder
+FuelOrderQueryServiceImpl ..> FuelOrderRepository
+FuelRequestService ..> FuelRequestPersistenceRepository
+
+FuelOrder --> OrderStatus
+FuelRequestPersistenceEntity --> RequestStatus
+
+FuelOrderRepositoryImpl ..|> FuelOrderRepository
+FuelOrderRepositoryImpl ..> FuelOrderPersistenceRepository
+FuelOrderRepositoryImpl ..> FuelOrderPersistenceAssembler
+FuelOrderPersistenceAssembler ..> FuelOrderPersistenceEntity
+FuelOrderPersistenceAssembler ..> FuelOrder
+@enduml
