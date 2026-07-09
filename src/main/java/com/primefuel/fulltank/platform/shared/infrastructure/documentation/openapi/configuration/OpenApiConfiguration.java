@@ -26,6 +26,9 @@ public class OpenApiConfiguration {
     @Value("${documentation.application.version}")
     String applicationVersion;
 
+    @Value("${documentation.application.server-url}")
+    String serverUrl;
+
     @Bean
     public OpenAPI fullTankPlatformOpenApi() {
         var openApi = new OpenAPI();
@@ -44,8 +47,8 @@ public class OpenApiConfiguration {
 
         openApi.servers(List.of(
                 new Server()
-                        .url("http://localhost:8080")
-                        .description("Local Development Environment")
+                        .url(this.serverUrl)
+                        .description("API Server")
         ));
 
         final String securitySchemeName = "bearerAuth";
